@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface TimerControlProps {
   onLock: (locked: boolean) => void;
+  onTimerUpdate?: (timeLeft: number, isActive: boolean) => void;
 }
 
 interface TimerState {
@@ -19,14 +19,13 @@ interface TimerState {
   duration: number;
 }
 
-const TimerControl = ({ onLock }: TimerControlProps) => {
+const TimerControl = ({ onLock, onTimerUpdate }: TimerControlProps) => {
   const [duration, setDuration] = useState([30]);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const { toast } = useToast();
 
-  // Load timer state from localStorage on component mount
   useEffect(() => {
     const savedState = localStorage.getItem('timerState');
     if (savedState) {
@@ -47,7 +46,6 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
             description: `Continuing with ${Math.ceil(remainingTime / 60)} minutes remaining`,
           });
         } else if (remainingTime <= 0 && state.isActive) {
-          // Timer expired while app was closed
           setIsActive(false);
           setTimeLeft(0);
           onLock(true);
@@ -59,7 +57,6 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
             variant: "destructive",
           });
         } else {
-          // Clean up expired or inactive timer
           localStorage.removeItem('timerState');
         }
       } catch (error) {
@@ -69,7 +66,6 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
     }
   }, [onLock, toast]);
 
-  // Save timer state to localStorage whenever it changes
   useEffect(() => {
     if (isActive && timeLeft > 0) {
       const state: TimerState = {
@@ -84,6 +80,12 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
       localStorage.removeItem('timerState');
     }
   }, [timeLeft, isActive, isPaused, duration]);
+
+  useEffect(() => {
+    if (onTimerUpdate) {
+      onTimerUpdate(timeLeft, isActive && !isPaused);
+    }
+  }, [timeLeft, isActive, isPaused, onTimerUpdate]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
