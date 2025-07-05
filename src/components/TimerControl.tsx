@@ -4,11 +4,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Play, Pause, Square, Timer } from "lucide-react";
+import { Clock, Play, Pause, Square, Timer, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TimerControlProps {
   onLock: (locked: boolean) => void;
+}
+
+interface TimerState {
+  timeLeft: number;
+  isActive: boolean;
+  isPaused: boolean;
+  startTime: number;
+  duration: number;
 }
 
 const TimerControl = ({ onLock }: TimerControlProps) => {
@@ -17,6 +25,65 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const { toast } = useToast();
+
+  // Load timer state from localStorage on component mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('timerState');
+    if (savedState) {
+      try {
+        const state: TimerState = JSON.parse(savedState);
+        const now = Date.now();
+        const elapsedTime = Math.floor((now - state.startTime) / 1000);
+        const remainingTime = Math.max(0, state.timeLeft - elapsedTime);
+
+        if (remainingTime > 0 && state.isActive && !state.isPaused) {
+          setTimeLeft(remainingTime);
+          setIsActive(true);
+          setIsPaused(false);
+          setDuration([Math.ceil(state.duration / 60)]);
+          
+          toast({
+            title: "Timer Resumed",
+            description: `Continuing with ${Math.ceil(remainingTime / 60)} minutes remaining`,
+          });
+        } else if (remainingTime <= 0 && state.isActive) {
+          // Timer expired while app was closed
+          setIsActive(false);
+          setTimeLeft(0);
+          onLock(true);
+          localStorage.removeItem('timerState');
+          
+          toast({
+            title: "Time's Up!",
+            description: "Screen time limit reached while app was closed. Device is now locked.",
+            variant: "destructive",
+          });
+        } else {
+          // Clean up expired or inactive timer
+          localStorage.removeItem('timerState');
+        }
+      } catch (error) {
+        console.error('Error loading timer state:', error);
+        localStorage.removeItem('timerState');
+      }
+    }
+  }, [onLock, toast]);
+
+  // Save timer state to localStorage whenever it changes
+  useEffect(() => {
+    if (isActive && timeLeft > 0) {
+      const state: TimerState = {
+        timeLeft,
+        isActive,
+        isPaused,
+        startTime: Date.now(),
+        duration: duration[0] * 60
+      };
+      localStorage.setItem('timerState', JSON.stringify(state));
+    } else if (!isActive || timeLeft <= 0) {
+      localStorage.removeItem('timerState');
+    }
+  }, [timeLeft, isActive, isPaused, duration]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -27,6 +94,7 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
           if (time <= 1) {
             setIsActive(false);
             onLock(true);
+            localStorage.removeItem('timerState');
             toast({
               title: "Time's Up!",
               description: "Screen time limit reached. Device is now locked.",
@@ -47,7 +115,8 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
   }, [isActive, isPaused, timeLeft, onLock, toast]);
 
   const startTimer = () => {
-    setTimeLeft(duration[0] * 60);
+    const newTimeLeft = duration[0] * 60;
+    setTimeLeft(newTimeLeft);
     setIsActive(true);
     setIsPaused(false);
     toast({
@@ -58,12 +127,33 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
 
   const pauseTimer = () => {
     setIsPaused(!isPaused);
+    toast({
+      title: isPaused ? "Timer Resumed" : "Timer Paused",
+      description: isPaused ? "Screen time monitoring resumed" : "Screen time monitoring paused",
+    });
   };
 
   const stopTimer = () => {
     setIsActive(false);
     setTimeLeft(0);
     onLock(false);
+    localStorage.removeItem('timerState');
+    toast({
+      title: "Timer Stopped",
+      description: "Screen time monitoring stopped",
+    });
+  };
+
+  const resetTimer = () => {
+    setIsActive(false);
+    setTimeLeft(0);
+    setIsPaused(false);
+    onLock(false);
+    localStorage.removeItem('timerState');
+    toast({
+      title: "Timer Reset",
+      description: "All timer data cleared",
+    });
   };
 
   const formatTime = (seconds: number) => {
@@ -81,7 +171,7 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
             <span>Set Screen Time</span>
           </CardTitle>
           <CardDescription>
-            Set how long the device can be used before it locks
+            Set how long the device can be used before it locks. Timer persists even if app is closed.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -137,6 +227,15 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
                 </Button>
               </>
             )}
+            
+            <Button 
+              onClick={resetTimer}
+              variant="outline"
+              size="icon"
+              className="text-orange-600 hover:text-orange-700"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -148,7 +247,7 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
             <span>Current Timer</span>
           </CardTitle>
           <CardDescription>
-            Active screen time monitoring
+            Active screen time monitoring - continues even if app is closed
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -184,6 +283,12 @@ const TimerControl = ({ onLock }: TimerControlProps) => {
                   : 'Set a timer to begin monitoring'
                 }
               </p>
+              
+              {isActive && (
+                <p className="text-xs text-blue-600 font-medium">
+                  ✓ Timer will continue even if app is closed
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
