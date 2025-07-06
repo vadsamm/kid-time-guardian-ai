@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 interface SecurityContextType {
   isParentAuthenticated: boolean;
   lastAuthTime: number;
-  authenticateParent: (method: 'pin' | 'voice') => boolean;
+  authenticateParent: (method: 'pin' | 'voice', input?: string) => boolean;
   logout: () => void;
   isSessionValid: () => boolean;
   emergencyUnlock: () => void;
@@ -43,25 +43,28 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
-  const authenticateParent = (method: 'pin' | 'voice'): boolean => {
-    // Enhanced validation - you can customize these
+  const authenticateParent = (method: 'pin' | 'voice', input?: string): boolean => {
     const validPins = ['1234', '0000', '9999'];
     const voiceKeywords = ['parent', 'unlock', 'emergency', 'homework', 'adult'];
     
     let isValid = false;
     
-    if (method === 'pin') {
-      // This would be called with actual PIN input
-      isValid = true; // Simplified for demo
-    } else if (method === 'voice') {
-      // This would be called with actual voice analysis
-      isValid = true; // Simplified for demo
+    if (method === 'pin' && input) {
+      // Validate actual PIN input
+      isValid = validPins.includes(input.trim());
+      console.log('PIN validation:', input, 'Valid:', isValid);
+    } else if (method === 'voice' && input) {
+      // Validate voice input for keywords
+      const lowerInput = input.toLowerCase();
+      isValid = voiceKeywords.some(keyword => lowerInput.includes(keyword));
+      console.log('Voice validation:', input, 'Valid:', isValid);
     }
 
     if (isValid) {
       const now = Date.now();
       setIsParentAuthenticated(true);
       setLastAuthTime(now);
+      setIsEmergencyMode(false); // Clear emergency mode on normal auth
       
       // Save session
       localStorage.setItem('parentAuthSession', JSON.stringify({
@@ -80,12 +83,20 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLastAuthTime(0);
     setIsEmergencyMode(false);
     localStorage.removeItem('parentAuthSession');
+    console.log('Parent logged out');
   };
 
   const isSessionValid = (): boolean => {
     if (!isParentAuthenticated) return false;
     const now = Date.now();
-    return (now - lastAuthTime) < SESSION_TIMEOUT;
+    const isValid = (now - lastAuthTime) < SESSION_TIMEOUT;
+    
+    // Auto logout if session expired
+    if (!isValid && isParentAuthenticated) {
+      logout();
+    }
+    
+    return isValid;
   };
 
   const emergencyUnlock = () => {
@@ -100,6 +111,8 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       authenticated: true,
       emergency: true
     }));
+    
+    console.log('Emergency unlock activated');
   };
 
   return (
