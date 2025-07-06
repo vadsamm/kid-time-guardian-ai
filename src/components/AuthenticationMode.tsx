@@ -30,7 +30,17 @@ const AuthenticationMode = ({ currentMode, onModeChange }: AuthenticationModePro
   const effectiveMode = (isParentAuthenticated && isSessionValid()) ? 'parent' : 'child';
 
   const handlePinAuth = () => {
-    // Pass the actual PIN to the authentication function
+    if (pin.length < 3) {
+      toast({
+        title: "Invalid PIN",
+        description: "PIN must be at least 3 digits",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('Attempting PIN authentication with:', pin);
+    
     if (authenticateParent('pin', pin)) {
       onModeChange('parent');
       toast({
@@ -40,7 +50,7 @@ const AuthenticationMode = ({ currentMode, onModeChange }: AuthenticationModePro
       setPin("");
     } else {
       toast({
-        title: "Authentication Failed",
+        title: "Authentication Failed", 
         description: "Incorrect PIN. Try 1234, 0000, or 9999",
         variant: "destructive",
       });
@@ -49,13 +59,23 @@ const AuthenticationMode = ({ currentMode, onModeChange }: AuthenticationModePro
   };
 
   const handleVoiceAuth = () => {
+    if (!voiceInput.trim()) {
+      toast({
+        title: "No Voice Input",
+        description: "Please enter some text to simulate voice input",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsRecording(true);
     
-    // Simulate voice recording and AI processing
+    console.log('Attempting voice authentication with:', voiceInput);
+    
+    // Simulate voice processing delay
     setTimeout(() => {
       setIsRecording(false);
       
-      // Pass the voice input to the authentication function
       if (authenticateParent('voice', voiceInput)) {
         onModeChange('parent');
         toast({
@@ -83,7 +103,6 @@ const AuthenticationMode = ({ currentMode, onModeChange }: AuthenticationModePro
   };
 
   const switchToChildMode = () => {
-    // Don't logout, just switch UI mode
     onModeChange('child');
     toast({
       title: "Switched to Child Mode",
@@ -188,9 +207,9 @@ const AuthenticationMode = ({ currentMode, onModeChange }: AuthenticationModePro
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
                     maxLength={4}
-                    onKeyPress={(e) => e.key === 'Enter' && pin.length === 4 && handlePinAuth()}
+                    onKeyPress={(e) => e.key === 'Enter' && pin.length >= 3 && handlePinAuth()}
                   />
-                  <Button onClick={handlePinAuth} disabled={pin.length !== 4}>
+                  <Button onClick={handlePinAuth} disabled={pin.length < 3}>
                     Unlock
                   </Button>
                 </div>

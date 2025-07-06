@@ -8,9 +8,10 @@ import { Shield, Clock, Smartphone, Users, AlertTriangle, CheckCircle, Activity 
 
 interface ParentDashboardProps {
   currentMode: 'parent' | 'child';
+  onQuickAction?: (action: string) => void;
 }
 
-const ParentDashboard = ({ currentMode }: ParentDashboardProps) => {
+const ParentDashboard = ({ currentMode, onQuickAction }: ParentDashboardProps) => {
   const todayUsage = 45; // minutes
   const dailyLimit = 60; // minutes
   const usagePercentage = (todayUsage / dailyLimit) * 100;
@@ -27,6 +28,12 @@ const ParentDashboard = ({ currentMode }: ParentDashboardProps) => {
     { label: 'Time Remaining', value: `${dailyLimit - todayUsage} min`, icon: Activity, color: 'orange' },
     { label: 'Mode Status', value: currentMode === 'parent' ? 'Parent' : 'Child', icon: Users, color: 'purple' },
   ];
+
+  const handleQuickAction = (action: string) => {
+    if (onQuickAction) {
+      onQuickAction(action);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -155,15 +162,27 @@ const ParentDashboard = ({ currentMode }: ParentDashboardProps) => {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-3">
-              <Button variant="outline" className="justify-start">
+              <Button 
+                variant="outline" 
+                className="justify-start"
+                onClick={() => handleQuickAction('timer')}
+              >
                 <Clock className="h-4 w-4 mr-2" />
                 Set Timer
               </Button>
-              <Button variant="outline" className="justify-start">
+              <Button 
+                variant="outline" 
+                className="justify-start"
+                onClick={() => handleQuickAction('apps')}
+              >
                 <Smartphone className="h-4 w-4 mr-2" />
                 Manage Apps
               </Button>
-              <Button variant="outline" className="justify-start">
+              <Button 
+                variant="outline" 
+                className="justify-start"
+                onClick={() => handleQuickAction('auth')}
+              >
                 <Users className="h-4 w-4 mr-2" />
                 Switch Mode
               </Button>

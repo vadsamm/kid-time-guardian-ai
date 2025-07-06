@@ -15,10 +15,11 @@ import NotificationManager from "@/components/NotificationManager";
 import { SecurityProvider, useSecurityContext } from "@/contexts/SecurityContext";
 
 const AppContent = () => {
-  const [currentMode, setCurrentMode] = useState<'parent' | 'child'>('parent');
+  const [currentMode, setCurrentMode] = useState<'parent' | 'child'>('child');
   const [isLocked, setIsLocked] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isTimerActive, setIsTimerActive] = useState(false);
+  const [activeTab, setActiveTab] = useState("dashboard");
   
   const { isParentAuthenticated, isSessionValid } = useSecurityContext();
 
@@ -32,6 +33,22 @@ const AppContent = () => {
   const handleTimerUpdate = (newTimeLeft: number, active: boolean) => {
     setTimeLeft(newTimeLeft);
     setIsTimerActive(active);
+  };
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'timer':
+        setActiveTab('timer');
+        break;
+      case 'apps':
+        setActiveTab('apps');
+        break;
+      case 'auth':
+        setActiveTab('auth');
+        break;
+      default:
+        break;
+    }
   };
 
   if (isLocked) {
@@ -94,7 +111,7 @@ const AppContent = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="dashboard" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-5 mb-8 bg-white/60 backdrop-blur-sm">
             <TabsTrigger value="dashboard" className="flex items-center space-x-2">
               <BarChart3 className="h-4 w-4" />
@@ -119,7 +136,10 @@ const AppContent = () => {
           </TabsList>
 
           <TabsContent value="dashboard" className="animate-slide-in">
-            <ParentDashboard currentMode={effectiveMode} />
+            <ParentDashboard 
+              currentMode={effectiveMode} 
+              onQuickAction={handleQuickAction}
+            />
           </TabsContent>
 
           <TabsContent value="timer" className="animate-slide-in">
