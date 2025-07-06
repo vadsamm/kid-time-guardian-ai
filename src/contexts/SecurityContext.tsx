@@ -9,6 +9,9 @@ interface SecurityContextType {
   isSessionValid: () => boolean;
   emergencyUnlock: () => void;
   isEmergencyMode: boolean;
+  setCustomPin: (pin: string) => void;
+  hasCustomPin: () => boolean;
+  getCustomPin: () => string | null;
 }
 
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
@@ -43,16 +46,36 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
+  const setCustomPin = (pin: string) => {
+    localStorage.setItem('customParentPin', pin);
+    console.log('Custom PIN set successfully');
+  };
+
+  const hasCustomPin = (): boolean => {
+    return localStorage.getItem('customParentPin') !== null;
+  };
+
+  const getCustomPin = (): string | null => {
+    return localStorage.getItem('customParentPin');
+  };
+
   const authenticateParent = (method: 'pin' | 'voice', input?: string): boolean => {
-    const validPins = ['1234', '0000', '9999'];
+    const defaultPins = ['1234', '0000', '9999'];
     const voiceKeywords = ['parent', 'unlock', 'emergency', 'homework', 'adult'];
     
     let isValid = false;
     
     if (method === 'pin' && input) {
-      // Validate actual PIN input
-      isValid = validPins.includes(input.trim());
-      console.log('PIN validation:', input, 'Valid:', isValid);
+      const customPin = getCustomPin();
+      if (customPin) {
+        // Use custom PIN if set
+        isValid = input.trim() === customPin;
+        console.log('Custom PIN validation:', input, 'Valid:', isValid);
+      } else {
+        // Fall back to default PINs if no custom PIN is set
+        isValid = defaultPins.includes(input.trim());
+        console.log('Default PIN validation:', input, 'Valid:', isValid);
+      }
     } else if (method === 'voice' && input) {
       // Validate voice input for keywords
       const lowerInput = input.toLowerCase();
@@ -123,7 +146,10 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       logout,
       isSessionValid,
       emergencyUnlock,
-      isEmergencyMode
+      isEmergencyMode,
+      setCustomPin,
+      hasCustomPin,
+      getCustomPin
     }}>
       {children}
     </SecurityContext.Provider>
